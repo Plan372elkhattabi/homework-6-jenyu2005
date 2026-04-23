@@ -1,8 +1,88 @@
 ---
-title: PLAN 372
-author: Your Name
+title: PLAN 372 Homework 6
+author: Jennifer Yu
 ---
 
-Place your analysis code in this file; you must not rename it, though you may delete these instructions. Please update the block above with the name of the assignment and with your name.When you push your code to github, it will automatically be rendered for grading. You can see whether the automatic rendering worked in the "Actions" tab of the github repository.
+```{r}
+library(tidyverse)
+#setwd("C:/Users/19107/Documents/PLAN372/homework/homework6/homework-6-jenyu2005") #comment this out later
 
-If you use any libraries other than `tidyverse`, `lubridate`, `sf`, `ggplot2`, `here`, `terra`, `ggspatial`, `rJavaEnv`, and `r5r`, add them to the list in the DESCRIPTION file.
+trees <- read_csv("TS3_Raw_tree_data.csv") #read csv file
+``` 
+
+**Question 1: Sample sizes by State**
+
+```{r}
+trees <- trees %>% #extract city name and abbreviate state name 
+  mutate(
+    city_name  = str_extract(City, "^[^,]+"), #extract everything before the comma (city name)
+    state_abbr = str_extract(City, "[:upper:]{2}$") #extract 2 uppercase letters at the end (state abbreviation)
+  )
+
+#Count the records per state
+state_counts <- trees %>%
+  count(state_abbr, name = "n_records") %>%
+  arrange(desc(n_records)) #sort from high to low (descending order)
+
+print(state_counts) #print table
+```
+
+```{r}
+ggplot(state_counts, aes(x = reorder(state_abbr, -n_records), y = n_records)) + #make ggplot or bar chart and order it (states) from most to least records on x axis 
+  geom_col(fill = "lightblue") + 
+  geom_text(aes(label = n_records), size = 3) +
+  labs(
+    title = "Tree Records by State", #title
+    x = "State", #x axis 
+    y = "Number of Records") + #y axis
+  theme_minimal()
+```
+
+**Answer**: The bar plot code above shows the number of records in each state. The dataset contains records from 13 states. California has the most records with 4062. The next state with the most records is Washington with 994. The following states are closer in size. They are close to the number of records that Washington has. For example, Idaho has 923, Hawaii has 918, Florida has 895, and etc. 
+
+**Question 2: Cities in NC and SC**
+```{r}
+nc_sc <- trees %>% #filter to NC and SC
+  filter(state_abbr == "NC" | state_abbr == "SC") #filter trees to only NC and SC
+
+nc_sc %>% #find diff cities 
+  distinct(city_name, state_abbr) %>%
+  arrange(state_abbr)
+```
+**Answer**: The data was collected from two cities in North Carolina and South Carolina. One is Charlotte, NC, and the other is Charleston, SC. 
+
+**Question 3: Genera and Species**
+```{r}
+nc_sc <- nc_sc %>% #extract the first word of ScientificName as the genus
+  rename(avg_cdia = `AvgCdia (m)`) %>% #renamed it to avoid errors-
+  mutate(genus = str_extract(ScientificName, "^[^ ]+"))
+
+crown_genus <- nc_sc %>% #group by genus 
+  group_by(genus) %>%
+  summarise(avg_crown = mean(avg_cdia, na.rm = TRUE)) %>% #calculate and summarize the crown diameter for each genus and ignore values that have NA in them
+  arrange(desc(avg_crown)) #sort from largest to smallest average crown diameter (descending order)
+
+print(crown_genus) #print results
+```
+
+**Answer**: The genus with the largest average crown diameter in NC and SC is Quercus. It has an average crown diameter of 13.6 meters.
+
+**Question 4: Tree Age**
+
+```{r}
+age_genus <- nc_sc %>% #group by genus 
+  group_by(genus) %>%
+  summarise(avg_age = mean(Age, na.rm = TRUE)) %>% #calculate and summarize average age for each genus and ignore all values that have NA in them
+  arrange(desc(avg_age)) #sort from oldest to youngest average age (descending order)
+
+print(age_genus) #print results
+```
+
+**Answer**: Yes, there are differences in average age across different genera of trees in the dataset. Quercus trees are the oldest, which average at 35.6 years. This is older than most of the other genera. This is why Quercus has the largest crown diameter. 
+
+**Question 5: AI Usage**
+
+**Answer**: For this assignment, I used the two Quarto documents from in class materials or files on Canvas for writing expressions and working with str_extract functions. I also used AI to help with specific parts of the code I was unsure about and had the same errors for a while. I specifically used AI for (x = reorder(state_abbr, -n_records), y = n_records)) +) code to use for the ggplot bar chart for Question 1. I knew I had to use n_records, but for some reason when I tried to plot it, the bar chart looked messed up. I think it was because of the reorder function. Also in question 3, I used AI for the expression ^[^ ]+ to extract the genus from the scientific name. I was unsure which symbols to use to match the first word. I know I had to use ^. I was missing the [^] inside the brackets. I thought one ^ would have been sufficient. Overall, AI was helpful for filling in the specific or unknown gaps I had.  
+
+
+
